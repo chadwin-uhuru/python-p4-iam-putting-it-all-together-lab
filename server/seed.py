@@ -1,63 +1,37 @@
-#!/usr/bin/env python3
-
-from random import randint, choice as rc
-
-from faker import Faker
-
-from app import app
-from models import db, Recipe, User
-
-fake = Faker()
+from app import app, db
+from models import User, Recipe
 
 with app.app_context():
-
     print("Deleting all records...")
     Recipe.query.delete()
     User.query.delete()
-
-    fake = Faker()
+    db.session.commit()
 
     print("Creating users...")
+    users_data = [
+        {"username": "Christina", "password": "password123", "image_url": "http://lewis.com/", "bio": "Other specific data common card."},
+        {"username": "James", "password": "password123", "image_url": "http://example.com/james.png", "bio": "Loves cooking."},
+        {"username": "Maria", "password": "password123", "image_url": "http://example.com/maria.png", "bio": "Recipe enthusiast."}
+    ]
 
-    # make sure users have unique usernames
     users = []
-    usernames = []
-
-    for i in range(20):
-        
-        username = fake.first_name()
-        while username in usernames:
-            username = fake.first_name()
-        usernames.append(username)
-
-        user = User(
-            username=username,
-            bio=fake.paragraph(nb_sentences=3),
-            image_url=fake.url(),
-        )
-
-        user.password_hash = user.username + 'password'
-
+    for u in users_data:
+        user = User(username=u["username"], image_url=u["image_url"], bio=u["bio"])
+        user.password = u["password"]
+        db.session.add(user)
         users.append(user)
-
-    db.session.add_all(users)
+    db.session.commit()
 
     print("Creating recipes...")
-    recipes = []
-    for i in range(100):
-        instructions = fake.paragraph(nb_sentences=8)
-        
-        recipe = Recipe(
-            title=fake.sentence(),
-            instructions=instructions,
-            minutes_to_complete=randint(15,90),
-        )
+    recipes_data = [
+        {"title": "Pancakes", "instructions": "Mix flour, eggs, milk, and sugar. Cook on skillet until golden brown. Serve with syrup.", "minutes_to_complete": 20, "user": users[0]},
+        {"title": "Omelette", "instructions": "Beat eggs, pour into pan, add cheese, fold, and serve. Make sure eggs are fully cooked.", "minutes_to_complete": 10, "user": users[1]},
+        {"title": "Chocolate Cake", "instructions": "Combine flour, sugar, cocoa powder, eggs, milk, and butter. Bake at 350°F for 35 minutes. Let it cool and frost.", "minutes_to_complete": 60, "user": users[2]}
+    ]
 
-        recipe.user = rc(users)
+    for r in recipes_data:
+        recipe = Recipe(title=r["title"], instructions=r["instructions"], minutes_to_complete=r["minutes_to_complete"], user_id=r["user"].id)
+        db.session.add(recipe)
 
-        recipes.append(recipe)
-
-    db.session.add_all(recipes)
-    
     db.session.commit()
-    print("Complete.")
+    print("Seeding complete!")
