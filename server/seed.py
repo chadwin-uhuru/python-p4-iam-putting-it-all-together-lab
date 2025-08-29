@@ -1,57 +1,34 @@
-#!/usr/bin/env python3
+from app import app, db, User, Recipe
 
-from random import randint, choice as rc
-from faker import Faker
+with app.app_context():  # <-- push app context from Flask app
+    # Clear existing data
+    Recipe.query.delete()
+    User.query.delete()
+    db.session.commit()
 
-from config import app, db
-from models import User, Recipe
+    # Create users
+    user1 = User(username="alice", bio="I love cooking!")
+    user1.password = "password1"
+    user2 = User(username="bob", bio="I enjoy baking!")
+    user2.password = "password2"
 
-fake = Faker()
+    db.session.add_all([user1, user2])
+    db.session.commit()
 
-def create_users():
-    users = []
-    for _ in range(5):
-        user = User(
-            username=fake.user_name(),
-            bio=fake.paragraph(),
-            image_url=fake.image_url()
-        )
-        user.password_hash = 'password'
-        users.append(user)
-    return users
+    # Create recipes
+    recipe1 = Recipe(
+        title="Pancakes",
+        instructions="Mix flour, milk, and eggs. Cook on a hot skillet until golden brown on both sides. Serve warm.",
+        minutes_to_complete=20,
+        user_id=user1.id
+    )
+    recipe2 = Recipe(
+        title="Chocolate Cake",
+        instructions="Combine flour, cocoa, sugar, eggs, and butter. Bake at 350F for 30 minutes. Let cool before frosting.",
+        minutes_to_complete=45,
+        user_id=user2.id
+    )
 
-def create_recipes(users):
-    recipes = []
-    instructions = """
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-    Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
-    """
-    
-    for _ in range(10):
-        recipe = Recipe(
-            title=fake.sentence(),
-            instructions=instructions,
-            minutes_to_complete=randint(15, 120),
-            user_id=rc(users).id
-        )
-        recipes.append(recipe)
-    return recipes
-
-if __name__ == '__main__':
-    with app.app_context():
-        print("Clearing db...")
-        User.query.delete()
-        Recipe.query.delete()
-        
-        print("Seeding users...")
-        users = create_users()
-        db.session.add_all(users)
-        db.session.commit()
-        
-        print("Seeding recipes...")
-        recipes = create_recipes(users)
-        db.session.add_all(recipes)
-        db.session.commit()
-        
-        print("Done seeding!")
+    db.session.add_all([recipe1, recipe2])
+    db.session.commit()
+    print("Database seeded successfully!")
