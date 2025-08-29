@@ -1,37 +1,57 @@
-from app import app, db
+#!/usr/bin/env python3
+
+from random import randint, choice as rc
+from faker import Faker
+
+from config import app, db
 from models import User, Recipe
 
-with app.app_context():
-    print("Deleting all records...")
-    Recipe.query.delete()
-    User.query.delete()
-    db.session.commit()
+fake = Faker()
 
-    print("Creating users...")
-    users_data = [
-        {"username": "Christina", "password": "password123", "image_url": "http://lewis.com/", "bio": "Other specific data common card."},
-        {"username": "James", "password": "password123", "image_url": "http://example.com/james.png", "bio": "Loves cooking."},
-        {"username": "Maria", "password": "password123", "image_url": "http://example.com/maria.png", "bio": "Recipe enthusiast."}
-    ]
-
+def create_users():
     users = []
-    for u in users_data:
-        user = User(username=u["username"], image_url=u["image_url"], bio=u["bio"])
-        user.password = u["password"]
-        db.session.add(user)
+    for _ in range(5):
+        user = User(
+            username=fake.user_name(),
+            bio=fake.paragraph(),
+            image_url=fake.image_url()
+        )
+        user.password_hash = 'password'
         users.append(user)
-    db.session.commit()
+    return users
 
-    print("Creating recipes...")
-    recipes_data = [
-        {"title": "Pancakes", "instructions": "Mix flour, eggs, milk, and sugar. Cook on skillet until golden brown. Serve with syrup.", "minutes_to_complete": 20, "user": users[0]},
-        {"title": "Omelette", "instructions": "Beat eggs, pour into pan, add cheese, fold, and serve. Make sure eggs are fully cooked.", "minutes_to_complete": 10, "user": users[1]},
-        {"title": "Chocolate Cake", "instructions": "Combine flour, sugar, cocoa powder, eggs, milk, and butter. Bake at 350°F for 35 minutes. Let it cool and frost.", "minutes_to_complete": 60, "user": users[2]}
-    ]
+def create_recipes(users):
+    recipes = []
+    instructions = """
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+    """
+    
+    for _ in range(10):
+        recipe = Recipe(
+            title=fake.sentence(),
+            instructions=instructions,
+            minutes_to_complete=randint(15, 120),
+            user_id=rc(users).id
+        )
+        recipes.append(recipe)
+    return recipes
 
-    for r in recipes_data:
-        recipe = Recipe(title=r["title"], instructions=r["instructions"], minutes_to_complete=r["minutes_to_complete"], user_id=r["user"].id)
-        db.session.add(recipe)
-
-    db.session.commit()
-    print("Seeding complete!")
+if __name__ == '__main__':
+    with app.app_context():
+        print("Clearing db...")
+        User.query.delete()
+        Recipe.query.delete()
+        
+        print("Seeding users...")
+        users = create_users()
+        db.session.add_all(users)
+        db.session.commit()
+        
+        print("Seeding recipes...")
+        recipes = create_recipes(users)
+        db.session.add_all(recipes)
+        db.session.commit()
+        
+        print("Done seeding!")
